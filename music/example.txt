@@ -1,0 +1,20 @@
+All the folder inside the parent folder "music" will act as a playlist
+
+├── cover.py
+├── discord_rpc.py
+├── earphone.py
+├── music/               <--- this is the parent folder
+│   ├── Deep House/      <--- and this is one of the child folder acting as playlist
+│   ├── example.txt
+│   ├── Expedition-33/
+│   ├── HARD TECHNO/
+│   ├── Main_Playlist/
+│   └── MechaEdm/
+├── music_player.py
+├── player.py
+├── Privacy Policy.md
+├── README.md
+├── requirements.txt
+├── Terms of Service.md
+├── tui.py
+└── utils.py

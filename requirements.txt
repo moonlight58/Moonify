@@ -1,0 +1,6 @@
+pygame
+mutagen
+click
+curses
+pypresence
+requests
