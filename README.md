@@ -1,4 +1,4 @@
-# Music Player CLI
+# Moonify (Music Player CLI)
 
 A simple command-line interface (CLI) application that plays music from a selected folder containing `.mp3` files.
 
