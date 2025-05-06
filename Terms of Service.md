@@ -4,7 +4,7 @@
 
 ## Français
 
-Ce logiciel (« Music Player CLI ») a été développé uniquement pour un usage personnel par son auteur.
+Ce logiciel («Moonify») a été développé uniquement pour un usage personnel par son auteur.
 
 - **Usage personnel uniquement** : Ce programme n’est pas destiné à être distribué, partagé ou utilisé par des tiers.
 - **Aucune garantie** : Ce logiciel est fourni « tel quel », sans aucune garantie d’aucune sorte.
@@ -17,7 +17,7 @@ En utilisant ce logiciel, vous reconnaissez avoir compris et accepté ces condit
 
 ## English
 
-This software ("Music Player CLI") was developed solely for the personal use of its author.
+This software ("Moonify") was developed solely for the personal use of its author.
 
 - **Personal use only**: This program is not intended to be distributed, shared, or used by third parties.
 - **No warranty**: This software is provided "as is", without any kind of warranty.
@@ -30,7 +30,7 @@ By using this software, you acknowledge that you have understood and accepted th
 
 ## Deutsch
 
-Diese Software („Music Player CLI“) wurde ausschließlich für den persönlichen Gebrauch des Autors entwickelt.
+Diese Software ("Moonify") wurde ausschließlich für den persönlichen Gebrauch des Autors entwickelt.
 
 - **Nur für den persönlichen Gebrauch**: Dieses Programm ist nicht zur Verteilung, Weitergabe oder Nutzung durch Dritte bestimmt.
 - **Keine Garantie**: Diese Software wird „wie sie ist“ bereitgestellt, ohne jegliche Garantie.
