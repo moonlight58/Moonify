@@ -38,19 +38,21 @@ class Player:
             music_path = os.path.join(self.folder, music_file)
             pygame.mixer.music.load(music_path)
             pygame.mixer.music.play()
-            cover_path = "/tmp/current_cover.jpg"
-            cover_url = None
             
-            track_title, track_artist = parse_filename(music_file)
-        
-            if extract_cover(music_path, cover_path):
-                cover_url = upload_to_imgur(cover_path)
+            track_artist, track_title = parse_filename(music_file)
+
+            if self.discord_rpc.is_discord_running():   
+                cover_path = "/tmp/current_cover.jpg"
+                cover_url = None
                 
-            self.discord_rpc.show_track(
-                title=track_title,
-                artist=track_artist,
-                cover_url=cover_url
-            )
+                if extract_cover(music_path, cover_path):
+                    cover_url = upload_to_imgur(cover_path)
+                
+                self.discord_rpc.show_track(
+                    title=track_title,
+                    artist=track_artist,
+                    cover_url=cover_url
+                )
             
             try:
                 from mutagen.mp3 import MP3
@@ -60,7 +62,7 @@ class Player:
                 total_length = 0
             while True:
                 stdscr.clear()
-                stdscr.addstr(0, 0, f"Now playing: {music_file}")
+                stdscr.addstr(0, 0, f"Now playing: {track_title} - {track_artist}")
                 stdscr.addstr(2, 0, "Controls: [P]ause/[R]esume, [N]ext, [B]ack, [Q]uit, [+/-] Volume, [C]hange playlist, [S]earch")
                 if self.earphone_device:
                     stdscr.addstr(3, 0, "Earphone controls: Play/Pause, Next, Previous, Volume Up/Down")

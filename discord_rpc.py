@@ -1,7 +1,6 @@
-# discord_rpc.py
-
 import os
 import time
+import subprocess
 from pypresence import Presence
 
 class DiscordRPC:
@@ -9,13 +8,23 @@ class DiscordRPC:
         self.client_id = os.getenv("DISCORD_CLIENT_ID")  # Must be set in your environment
         self.rpc = None
 
-        if self.client_id:
+        if self.client_id and self.is_discord_running():
             try:
                 self.rpc = Presence(self.client_id)
                 self.rpc.connect()
             except Exception as e:
                 print(f"[DiscordRPC] Failed to connect: {e}")
                 self.rpc = None
+        else:
+            print("[DiscordRPC] Discord is not running. Skipping RPC connection.")
+
+    def is_discord_running(self):
+        """Check if Discord is running (Linux only)."""
+        try:
+            output = subprocess.check_output(["pgrep", "-f", "discord"], text=True)
+            return bool(output.strip())
+        except Exception:
+            return False
 
     def show_track(self, title, artist, cover_url=None):
         """Display current track in Discord Rich Presence."""
