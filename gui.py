@@ -2,10 +2,10 @@ import sys
 import os
 import random
 from PyQt5.QtWidgets import (
-    QApplication, QWidget, QVBoxLayout, QPushButton, QLabel, QSlider, QListWidget, QFileDialog, QHBoxLayout, QProgressBar
+    QApplication, QWidget, QVBoxLayout, QPushButton, QLabel, QSlider, QListWidget, QFileDialog, QHBoxLayout, QProgressBar, QComboBox
 )
 from PyQt5.QtCore import Qt, QTimer
-from PyQt5.QtGui import QPixmap
+from PyQt5.QtGui import QPixmap, QIcon
 from player import Player
 
 class MusicPlayerGUI(QWidget):
@@ -48,28 +48,35 @@ class MusicPlayerGUI(QWidget):
 
         # Controls
         controls_layout = QHBoxLayout()
-        self.play_btn = QPushButton("Play")
-        self.play_btn.clicked.connect(self.play)
-        controls_layout.addWidget(self.play_btn)
+        controls_layout.setSpacing(20)
+        controls_layout.setAlignment(Qt.AlignCenter)
 
-        self.pause_btn = QPushButton("Pause")
-        self.pause_btn.clicked.connect(self.pause)
-        controls_layout.addWidget(self.pause_btn)
-
-        self.next_btn = QPushButton("Next")
-        self.next_btn.clicked.connect(self.next_track)
-        controls_layout.addWidget(self.next_btn)
-
-        self.prev_btn = QPushButton("Previous")
-        self.prev_btn.clicked.connect(self.prev_track)
-        controls_layout.addWidget(self.prev_btn)
-        
-        self.shuffle_btn = QPushButton("Shuffle: Off")
+        self.shuffle_btn = QPushButton("⤨")
         self.shuffle_btn.setCheckable(True)
-        self.shuffle_btn.clicked.connect(self.toggle_shuffle)
+        self.shuffle_btn.setToolTip("Shuffle")
+        self.shuffle_btn.setFixedSize(40, 40)
         controls_layout.addWidget(self.shuffle_btn)
 
+        self.prev_btn = QPushButton("⏮")
+        self.prev_btn.setFixedSize(50, 50)
+        controls_layout.addWidget(self.prev_btn)
+
+        self.play_btn = QPushButton("▶")
+        self.play_btn.setFixedSize(60, 60)
+        self.play_btn.setStyleSheet("QPushButton { font-size: 28pt; border-radius: 30px; background-color: #1DB954; color: #191414; } QPushButton:hover { background-color: #1ed760; }")
+        controls_layout.addWidget(self.play_btn)
+
+        self.next_btn = QPushButton("⏭")
+        self.next_btn.setFixedSize(50, 50)
+        controls_layout.addWidget(self.next_btn)
+
         main_layout.addLayout(controls_layout)
+
+        # Connect buttons to their respective functions
+        self.shuffle_btn.clicked.connect(self.toggle_shuffle)
+        self.prev_btn.clicked.connect(self.prev_track)
+        self.play_btn.clicked.connect(self.toggle_play_pause)
+        self.next_btn.clicked.connect(self.next_track)
 
         # Volume
         self.volume_slider = QSlider(Qt.Horizontal)
@@ -79,18 +86,31 @@ class MusicPlayerGUI(QWidget):
         main_layout.addWidget(QLabel("Volume"))
         main_layout.addWidget(self.volume_slider)
 
-        # Open playlist
-        self.playlist_btn = QPushButton("Open Playlist Folder")
-        self.playlist_btn.clicked.connect(self.open_playlist)
-        main_layout.addWidget(self.playlist_btn)
+        # Playlist dropdown
+        self.playlist_dropdown = QComboBox()
+        self.playlist_dropdown.currentIndexChanged.connect(self.change_playlist)
+        main_layout.addWidget(QLabel("Playlists"))
+        main_layout.addWidget(self.playlist_dropdown)
+        self.populate_playlists()
 
         self.setLayout(main_layout)
 
-    def open_playlist(self):
-        folder = QFileDialog.getExistingDirectory(self, "Select Playlist Folder")
-        if folder:
+    def populate_playlists(self):
+        self.playlist_dropdown.clear()
+        music_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "music")
+        if os.path.exists(music_dir):
+            playlists = [d for d in os.listdir(music_dir) if os.path.isdir(os.path.join(music_dir, d))]
+            self.playlist_dropdown.addItems(playlists)
+            if playlists:
+                self.change_playlist(0)
+
+    def change_playlist(self, index):
+        music_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "music")
+        playlist_name = self.playlist_dropdown.currentText()
+        if playlist_name:
+            folder = os.path.join(music_dir, playlist_name)
             self.player = Player(folder)
-            self.label.setText("Playlist loaded. Ready to play.")
+            self.label.setText(f"Playlist loaded: {playlist_name}")
             self.update_playlist()
             self.show_cover()
             self.timer.start(500)
@@ -98,7 +118,6 @@ class MusicPlayerGUI(QWidget):
     def update_playlist(self):
         self.playlist_widget.clear()
         if self.player:
-            
             for song in self.player.music_files:
                 self.playlist_widget.addItem(song)
 
@@ -114,16 +133,30 @@ class MusicPlayerGUI(QWidget):
                 self.player.resume()
             else:
                 self.player.play()
-            self.waiting_for_next = False  # Reset guard when a new song starts
+            self.waiting_for_next = False
             info = self.player.get_current_track_info()
             self.label.setText(f"Playing: {info['title']} - {info['artist']}")
             self.playlist_widget.setCurrentRow(self.player.current_index)
             self.show_cover()
             self.timer.start(500)
+            self.play_btn.setText("⏸")
 
     def pause(self):
         if self.player:
             self.player.pause()
+            self.label.setText("Paused")
+            self.play_btn.setText("▶")
+
+    def toggle_play_pause(self):
+        if not self.player:
+            return
+        if self.player.paused or not self.player.is_playing():
+            self.player.resume()
+            self.play_btn.setText("⏸")
+            self.label.setText(f"Playing: {self.player.get_current_track_info()['title']} - {self.player.get_current_track_info()['artist']}")
+        else:
+            self.player.pause()
+            self.play_btn.setText("▶")
             self.label.setText("Paused")
 
     def next_track(self):
@@ -180,15 +213,132 @@ class MusicPlayerGUI(QWidget):
             return
         self.player.shuffle = not self.player.shuffle
         if self.player.shuffle:
-            self.shuffle_btn.setText("Shuffle: On")
+            self.shuffle_btn.setText("⤨·")
             random.shuffle(self.player.music_files)
         else:
-            self.shuffle_btn.setText("Shuffle: Off")
+            self.shuffle_btn.setText("⤨")
             self.player.music_files.sort()
         self.update_playlist()
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
+
+    # Example dark theme QSS
+    dark_qss = """
+    QWidget {
+        background-color: #232629;
+        color: #f0f0f0;
+        font-family: 'Segoe UI', 'Arial', sans-serif;
+        font-size: 12pt;
+    }
+    QProgressBar {
+        background: #444;
+        border: 1px solid #222;
+        border-radius: 5px;
+        text-align: center;
+    }
+    QProgressBar::chunk {
+        background-color: #0078d7;
+        width: 10px;
+    }
+    QPushButton {
+        background-color: #333;
+        border: 1px solid #555;
+        border-radius: 5px;
+        padding: 5px;
+    }
+    QPushButton:hover {
+        background-color: #444;
+    }
+    QSlider::groove:horizontal {
+        border: 1px solid #222;
+        height: 8px;
+        background: #444;
+        margin: 2px 0;
+        border-radius: 4px;
+    }
+    QSlider::handle:horizontal {
+        background: #0078d7;
+        border: 1px solid #222;
+        width: 18px;
+        margin: -2px 0;
+        border-radius: 9px;
+    }
+    QListWidget, QComboBox {
+        background-color: #2a2d2e;
+        color: #f0f0f0;
+        border: 1px solid #444;
+    }
+    QComboBox QAbstractItemView {
+        background-color: #232629;
+        selection-background-color: #0078d7;
+        color: #f0f0f0;
+    }
+    """
+    
+    spotify_qss = """
+    QWidget {
+        background-color: #191414;
+        color: #FFFFFF;
+        font-family: 'Segoe UI', 'Arial', sans-serif;
+        font-size: 12pt;
+    }
+    QLabel {
+        color: #FFFFFF;
+    }
+    QProgressBar {
+        background: #404040;
+        border: none;
+        border-radius: 5px;
+        height: 8px;
+        text-align: center;
+        color: #b3b3b3;
+    }
+    QProgressBar::chunk {
+        background-color: #1DB954;
+        border-radius: 5px;
+    }
+    QPushButton {
+        background-color: transparent;
+        color: #b3b3b3;
+        border: none;
+        padding: 8px;
+        font-size: 16pt;
+    }
+    QPushButton:checked, QPushButton:pressed {
+        color: #1DB954;
+    }
+    QPushButton:hover {
+        color: #1DB954;
+    }
+    QSlider::groove:horizontal {
+        border: none;
+        height: 8px;
+        background: #404040;
+        border-radius: 4px;
+    }
+    QSlider::handle:horizontal {
+        background: #1DB954;
+        border: none;
+        width: 18px;
+        margin: -5px 0;
+        border-radius: 9px;
+    }
+    QListWidget, QComboBox {
+        background-color: #282828;
+        color: #FFFFFF;
+        border: none;
+    }
+    QComboBox QAbstractItemView {
+        background-color: #282828;
+        selection-background-color: #1DB954;
+        color: #FFFFFF;
+    }
+    """
+
+    app.setStyleSheet(spotify_qss)
+
+
     window = MusicPlayerGUI()
     window.show()
     sys.exit(app.exec_())

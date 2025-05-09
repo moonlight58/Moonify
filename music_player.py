@@ -8,4 +8,6 @@ def main():
     curses.wrapper(main_menu)
 
 if __name__ == "__main__":
+    app = QApplication(sys.argv)
+    
     main()
