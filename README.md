@@ -1,4 +1,4 @@
-# Music Player CLI
+# Moonify (Music Player CLI)
 
 A simple command-line interface (CLI) application that plays music from a selected folder containing `.mp3` files.
 
@@ -105,7 +105,7 @@ It will look like this
 - **[Q]uit**: Exit the application
 - **[+] / [-]**: Increase or decrease the volume
 - **[C]hange playlist**: Switch to a different music folder/playlist
-- **[S]earch**: Search for a track (if implemented)
+- **[S]earch**: Search for a track by file name
 - **Earphone controls**: Play/Pause, Next, Previous, Volume Up/Down (if supported)
 
 ---
