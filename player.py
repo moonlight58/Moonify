@@ -38,10 +38,14 @@ class Player:
         self.paused = False
         track_artist, track_title = parse_filename(music_file)
         cover_url = None
+        
+        cover_path = "/tmp/current_cover.jpg"
+        extract_cover(music_path, cover_path)
+        
         if self.discord_rpc.is_discord_running():
-            cover_path = "/tmp/current_cover.jpg"
-            if extract_cover(music_path, cover_path):
-                cover_url = upload_to_imgur(cover_path)
+            
+            cover_url = upload_to_imgur(cover_path)
+            
             self.discord_rpc.show_track(
                 title=track_title,
                 artist=track_artist,
@@ -103,3 +107,6 @@ class Player:
     def stop(self):
         pygame.mixer.music.stop()
         self.discord_rpc.clear()
+        
+    def get_elapsed_ms(self):
+        return pygame.mixer.music.get_pos()

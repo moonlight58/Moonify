@@ -5,14 +5,17 @@ import io
 from imgurpython import ImgurClient
 import os
 
-def extract_cover(mp3_path, output_path):
-    audio = MP3(mp3_path, ID3=ID3)
-    for tag in audio.tags.values():
-        if isinstance(tag, APIC):
-            img = Image.open(io.BytesIO(tag.data))
-            img.save(output_path)
-            return output_path
-    return None
+def extract_cover(mp3_path, cover_path):
+    try:
+        audio = MP3(mp3_path, ID3=ID3)
+        for tag in audio.tags.values():
+            if isinstance(tag, APIC):
+                with open(cover_path, 'wb') as img:
+                    img.write(tag.data)
+                return True
+    except Exception as e:
+        print(f"Error extracting cover: {e}")
+    return False
 
 def upload_to_imgur(image_path):
     client_id = os.getenv("IMGUR_CLIENT_ID")
