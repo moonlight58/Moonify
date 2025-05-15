@@ -94,7 +94,7 @@ It will look like this
    ```
 4. Follow the on-screen instructions in the terminal interface.
 
-**If the TUI doesn't work well for you, or just not for you. You can run the GUI implemented by following the commands below**
+**If the TUI doesn't work well for you, or just not for you. You can run the GUI implemented by pasting the following command**
    ```bash
    python3 gui.py
    ```
