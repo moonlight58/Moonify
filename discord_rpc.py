@@ -4,19 +4,21 @@ import subprocess
 from pypresence import Presence
 
 class DiscordRPC:
-    def __init__(self):
-        self.client_id = os.getenv("DISCORD_CLIENT_ID")  # Must be set in your environment
+    def __init__(self, enable_rpc=False):
+        self.client_id = os.getenv("DISCORD_CLIENT_ID")
         self.rpc = None
+        self.user_choice = 1 if enable_rpc else 0
 
-        if self.client_id and self.is_discord_running():
+        if self.user_choice and self.client_id and self.is_discord_running():
             try:
                 self.rpc = Presence(self.client_id)
                 self.rpc.connect()
+                print("[DiscordRPC] Discord Rich Presence enabled.")
             except Exception as e:
                 print(f"[DiscordRPC] Failed to connect: {e}")
                 self.rpc = None
         else:
-            print("[DiscordRPC] Discord is not running. Skipping RPC connection.")
+            print("[DiscordRPC] Discord Rich Presence disabled or Discord not running.")
 
     def is_discord_running(self):
         """Check if Discord is running (Linux only)."""

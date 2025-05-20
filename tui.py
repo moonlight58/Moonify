@@ -41,6 +41,7 @@ def play_with_tui(stdscr, player):
         total_length = info["duration"]
         track_title = info["title"]
         track_artist = info["artist"]
+        
         while True:
             stdscr.clear()
             stdscr.addstr(0, 0, f"Now playing: {track_title} - {track_artist}")
@@ -224,6 +225,11 @@ def main_menu(stdscr):
     stdscr.refresh()
     stdscr.getch()
 
+    stdscr.clear()
+    stdscr.addstr(0, 0, "Enable Discord Rich Presence? (y/N): ")
+    stdscr.refresh()
+    enable_rpc = stdscr.getch() in (ord('y'), ord('Y'))
+
     selected_playlist = select_playlist_with_curses(stdscr, music_folder)
     if not selected_playlist:
         return
@@ -238,5 +244,5 @@ def main_menu(stdscr):
     stdscr.refresh()
     shuffle = stdscr.getch() in (ord('y'), ord('Y'))
 
-    player = Player(selected_playlist, loop, shuffle, earphone_device)
+    player = Player(selected_playlist, loop, shuffle, earphone_device, enable_rpc=enable_rpc)
     play_with_tui(stdscr, player)

@@ -7,7 +7,5 @@ load_dotenv()
 def main():
     curses.wrapper(main_menu)
 
-if __name__ == "__main__":
-    app = QApplication(sys.argv)
-    
+if __name__ == "__main__":    
     main()

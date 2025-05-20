@@ -8,7 +8,7 @@ from discord_rpc import DiscordRPC
 from earphone import listen_for_earphone_events
 
 class Player:
-    def __init__(self, folder, loop=False, shuffle=False, earphone_device=None):
+    def __init__(self, folder, loop=False, shuffle=False, earphone_device=None, enable_rpc=False):
         self.folder = folder
         self.loop = loop
         self.shuffle = shuffle
@@ -20,14 +20,14 @@ class Player:
         self.paused = False
         self.earphone_events = []
         self.event_thread = None
-        self.discord_rpc = DiscordRPC()
+        self.discord_rpc = DiscordRPC(enable_rpc)
         if self.earphone_device and os.path.exists(self.earphone_device):
             self.event_thread = Thread(
                 target=listen_for_earphone_events,
                 args=(self.earphone_device, self.earphone_events),
                 daemon=True
             )
-            self.event_thread.start()
+            self.event_thread.start()        
         pygame.mixer.init()
 
     def play(self):
@@ -42,7 +42,7 @@ class Player:
         cover_path = "/tmp/current_cover.jpg"
         extract_cover(music_path, cover_path)
         
-        if self.discord_rpc.is_discord_running():
+        if self.discord_rpc.is_discord_running() and self.discord_rpc.user_choice == 1:
             
             cover_url = upload_to_imgur(cover_path)
             
