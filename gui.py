@@ -1,6 +1,10 @@
 import sys
 import os
 import random
+from threading import Thread
+import pygame
+from cover import extract_cover, upload_to_imgur
+from utils import parse_filename
 from PyQt5.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QPushButton, QLabel, QSlider, QListWidget, QFileDialog, QHBoxLayout, QProgressBar, QComboBox
 )
@@ -129,10 +133,30 @@ class MusicPlayerGUI(QWidget):
 
     def play(self):
         if self.player:
-            if self.player.paused:
-                self.player.resume()
-            else:
-                self.player.play()
+            music_file = self.player.music_files[self.player.current_index]
+            music_path = os.path.join(self.player.folder, music_file)
+            pygame.mixer.music.load(music_path)
+            pygame.mixer.music.play()
+            self.player.paused = False
+            track_artist, track_title = parse_filename(music_file)
+            cover_url = None
+
+            cover_path = "/tmp/current_cover.jpg"
+            extract_cover(music_path, cover_path)
+
+            # Only set rpc_info, do NOT call show_track here!
+            if self.player.discord_rpc.is_discord_running() and self.player.discord_rpc.user_choice == 1:
+                cover_url = upload_to_imgur(cover_path)
+                self.player.rpc_info = {
+                    "title": track_title,
+                    "artist": track_artist,
+                    "cover_url": cover_url
+                }
+                if not self.player.rpc_thread or not self.player.rpc_thread.is_alive():
+                    self.player.rpc_stop_event.clear()
+                    self.player.rpc_thread = Thread(target=self.player._discord_rpc_worker, daemon=True)
+                    self.player.rpc_thread.start()
+
             self.waiting_for_next = False
             info = self.player.get_current_track_info()
             self.label.setText(f"Playing: {info['title']} - {info['artist']}")

@@ -35,13 +35,17 @@ def select_playlist_with_curses(stdscr, base_folder):
 
 def play_with_tui(stdscr, player):
     jump_to_song = False
+    # Set up the end-of-song event
+    END_EVENT = pygame.USEREVENT + 1
+    pygame.mixer.music.set_endevent(END_EVENT)
+
     while True:
         player.play()
         info = player.get_current_track_info()
         total_length = info["duration"]
         track_title = info["title"]
         track_artist = info["artist"]
-        
+
         while True:
             stdscr.clear()
             stdscr.addstr(0, 0, f"Now playing: {track_title} - {track_artist}")
@@ -73,13 +77,17 @@ def play_with_tui(stdscr, player):
             progress_line = f"[{bar}] {elapsed_min:02d}:{elapsed_sec:02d} / {total_min:02d}:{total_sec:02d}"
             stdscr.addstr(7, 0, progress_line)
 
-            # Preview next 10 songs
+            # Preview next 10 songs (fit to terminal height)
+            height, width = stdscr.getmaxyx()
+            max_preview = min(10, height - 11)  # leave space for UI
             stdscr.addstr(9, 0, "Prochaines chansons :")
-            for i in range(1, 11):
+            for i in range(1, max_preview + 1):
                 next_index = (player.current_index + i) % len(player.music_files)
                 prefix = f"{i}. "
                 song_title = player.music_files[next_index]
-                stdscr.addstr(9 + i, 2, f"{prefix}{song_title}")
+                # Truncate song title to fit width
+                display_str = (prefix + song_title)[:width - 4]
+                stdscr.addstr(9 + i, 2, display_str)
 
             stdscr.refresh()
             key = -1
@@ -93,6 +101,18 @@ def play_with_tui(stdscr, player):
                 except curses.error:
                     key = -1
 
+            # Handle end of song without pygame.event (no video system in TUI)
+            if not player.paused and not player.is_playing():
+                player.next_track()
+                jump_to_song = False
+                break
+
+            # Handle end of song without pygame.event (no video system in TUI)
+            if not player.paused and not player.is_playing():
+                player.next_track()
+                jump_to_song = False
+                break
+
             if key == ord('p'):
                 if not player.paused:
                     player.pause()
@@ -101,9 +121,11 @@ def play_with_tui(stdscr, player):
                     player.resume()
             elif key == ord('n'):
                 player.next_track()
+                jump_to_song = False
                 break
             elif key == ord('b'):
                 player.previous_track()
+                jump_to_song = False
                 break
             elif key == ord('q'):
                 player.stop()
@@ -131,6 +153,7 @@ def play_with_tui(stdscr, player):
                     if player.shuffle:
                         random.shuffle(player.music_files)
                     player.current_index = 0
+                    jump_to_song = False
                     break
                 else:
                     stdscr.addstr(8, 0, "No playlist selected. Continuing current playlist.")
@@ -191,19 +214,10 @@ def play_with_tui(stdscr, player):
                 if jump_to_song:
                     break
 
-            # Only advance if not paused and not playing
-            if not player.is_playing() and not player.paused:
-                if not jump_to_song:
-                    player.current_index += 1
-                if player.current_index >= len(player.music_files):
-                    if player.loop:
-                        player.current_index = 0
-                    else:
-                        stdscr.addstr(7, 0, "End of playlist.")
-                        stdscr.refresh()
-                        stdscr.getch()
-                        return
-                break
+        # Only increment current_index if not jumping to a song (search)
+        if jump_to_song:
+            jump_to_song = False
+            continue
 
 def main_menu(stdscr):
     music_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'music')
