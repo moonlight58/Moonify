@@ -40,25 +40,37 @@ class Player:
 
 
     def _discord_rpc_worker(self):
-        """Thread to handle Discord RPC updates."""
+        """Thread to handle Discord RPC updates with debounce."""
+        last_info = None
         while not self.rpc_stop_event.is_set():
-            if self.rpc_info:
-                try:
-                    # Extract cover and upload to imgur in the thread
-                    music_path = self.rpc_info["music_path"]
-                    cover_path = "/tmp/current_cover.jpg"
-                    extract_cover(music_path, cover_path)
-                    cover_url = upload_to_imgur(cover_path)
-                    self.discord_rpc.show_track(
-                        title=self.rpc_info["title"],
-                        artist=self.rpc_info["artist"],
-                        cover_url=cover_url
-                    )
-                except Exception as e:
-                    print(f"[DiscordRPC] Failed to update: {e}")
-                self.rpc_info = None
-            # Sleep a bit to avoid busy waiting
-            self.rpc_stop_event.wait(1)
+            if self.rpc_info and self.rpc_info != last_info:
+                # Debounce: attend 1 seconde pour voir si une nouvelle info arrive
+                info_snapshot = self.rpc_info.copy()
+                waited = 0
+                while waited < 2:
+                    self.rpc_stop_event.wait(0.1)
+                    waited += 0.1
+                    # Si une nouvelle info arrive, on annule l'ancienne
+                    if self.rpc_info != info_snapshot:
+                        break
+                else:
+                    # Si pas de nouvelle info, on traite
+                    try:
+                        music_path = info_snapshot["music_path"]
+                        cover_path = "/tmp/current_cover.jpg"
+                        extract_cover(music_path, cover_path)
+                        cover_url = upload_to_imgur(cover_path)
+                        self.discord_rpc.show_track(
+                            title=info_snapshot["title"],
+                            artist=info_snapshot["artist"],
+                            cover_url=cover_url
+                        )
+                    except Exception as e:
+                        print(f"[DiscordRPC] Failed to update: {e}")
+                    self.rpc_info = None
+                    last_info = info_snapshot
+            else:
+                self.rpc_stop_event.wait(0.1)
 
     def play(self):
         music_file = self.music_files[self.current_index]

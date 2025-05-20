@@ -100,14 +100,7 @@ def play_with_tui(stdscr, player):
                     key = stdscr.getch()
                 except curses.error:
                     key = -1
-
-            # Handle end of song without pygame.event (no video system in TUI)
-            if not player.paused and not player.is_playing():
-                player.next_track()
-                jump_to_song = False
-                break
-
-            # Handle end of song without pygame.event (no video system in TUI)
+                    
             if not player.paused and not player.is_playing():
                 player.next_track()
                 jump_to_song = False
