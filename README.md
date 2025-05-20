@@ -45,7 +45,7 @@ Before using this application, you need to:
 
 1. **Clone the repository**  
    ```bash
-   git clone <repo-url>
+   git clone https://github.com/moonlight58/Moonify
    cd music-player-cli
    ```
 
@@ -90,9 +90,14 @@ It will look like this
 2. Make sure your Discord app ID and Imgur credentials are set (via environment variables or config, as required by your code).
 3. Run the application:
    ```bash
-   python player.py
+   python3 player.py
    ```
 4. Follow the on-screen instructions in the terminal interface.
+
+**If the TUI doesn't work well for you, or just not for you. You can run the GUI implemented by pasting the following command**
+   ```bash
+   python3 gui.py
+   ```
 
 ---
 
