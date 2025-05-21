@@ -7,7 +7,7 @@ Moonify was originally created as a **personal alternative to Spotify**, motivat
 This project aims to provide a lightweight, privacy-friendly, and customizable music experience—without streaming, ads, or telemetry.  
 You keep full control of your music library, and artists are supported when you buy or download music directly.
 
-You can browse your music library, search, shuffle, and control playback with keyboard shortcuts or compatible earphones.
+You can browse your music library, search, shuffle, and control playback with keyboard shortcuts or compatible earphones (still in development). I also implemented a discord Rich Presence into the app, it needs a Discord Application ID to connect to and it uses Imgur API to display the current music cover onto the Rich Presence
 
 ---
 
