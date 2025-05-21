@@ -1,6 +1,13 @@
 # Moonify (Music Player CLI)
 
-A simple command-line interface (CLI) application that plays music from a selected folder containing `.mp3` files.
+**Moonify** is a cross-platform music player for your local `.mp3` files, featuring both a command-line TUI (terminal user interface) and a modern GUI.  
+It supports playlists (folders), Discord Rich Presence, Imgur album art upload, and even earphone hardware controls on Linux.
+
+Moonify was originally created as a **personal alternative to Spotify**, motivated by concerns about how Spotify and similar streaming companies treat artists and handle user data.  
+This project aims to provide a lightweight, privacy-friendly, and customizable music experience—without streaming, ads, or telemetry.  
+You keep full control of your music library, and artists are supported when you buy or download music directly.
+
+You can browse your music library, search, shuffle, and control playback with keyboard shortcuts or compatible earphones.
 
 ---
 

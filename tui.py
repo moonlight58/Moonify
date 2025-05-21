@@ -17,7 +17,7 @@ def select_playlist_with_curses(stdscr, base_folder):
         stdscr.clear()
         stdscr.addstr(0, 0, "Available playlists:")
         for i, playlist in enumerate(playlists):
-            if i == current_selection:
+            if i == current_selection: 
                 stdscr.addstr(i + 1, 0, f"> {playlist}", curses.A_REVERSE)
             else:
                 stdscr.addstr(i + 1, 0, f"  {playlist}")

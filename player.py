@@ -44,17 +44,17 @@ class Player:
         last_info = None
         while not self.rpc_stop_event.is_set():
             if self.rpc_info and self.rpc_info != last_info:
-                # Debounce: attend 1 seconde pour voir si une nouvelle info arrive
+                # Debounce: wait for 2 seconds before updating
                 info_snapshot = self.rpc_info.copy()
                 waited = 0
                 while waited < 2:
                     self.rpc_stop_event.wait(0.1)
                     waited += 0.1
-                    # Si une nouvelle info arrive, on annule l'ancienne
+                    # if new info arrives, break
                     if self.rpc_info != info_snapshot:
                         break
                 else:
-                    # Si pas de nouvelle info, on traite
+                    # if no new info, proceed with the last snapshot
                     try:
                         music_path = info_snapshot["music_path"]
                         cover_path = "/tmp/current_cover.jpg"
