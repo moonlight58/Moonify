@@ -1,6 +1,6 @@
 # Moonify (Music Player CLI)
 
-**Moonify** is a cross-platform music player for your local `.mp3` files, featuring both a command-line TUI (terminal user interface) and a modern GUI.  
+**Moonify** is a cross-platform music player for your local `.mp3` files, featuring a command-line TUI (terminal user interface).  
 It supports playlists (folders), Discord Rich Presence, Imgur album art upload, and even earphone hardware controls on Linux.
 
 Moonify was originally created as a **personal alternative to Spotify**, motivated by concerns about how Spotify and similar streaming companies treat artists and handle user data.  
@@ -65,13 +65,13 @@ Before using this application, you need to:
 
 ## Requirements
 
-- Python 3.7+
+- Python 3.9+
 - [pygame](https://www.pygame.org/) (audio playback)
 - [mutagen](https://mutagen.readthedocs.io/) (MP3 metadata)
 - [click](https://click.palletsprojects.com/) (CLI)
 - [pypresence](https://qwertyquerty.github.io/pypresence/html/index.html) (Discord Rich Presence)
 - [requests](https://docs.python-requests.org/) (Imgur API)
-- [curses](https://docs.python.org/3/library/curses.html) (TUI, included with most Unix Python installs)
+- [Textual](https://textual.textualize.io/) (TUI window manager)
 
 ---
 
@@ -97,16 +97,9 @@ It will look like this
 2. Make sure your Discord app ID and Imgur credentials are set (via environment variables or config, as required by your code).
 3. Run the application:
    ```bash
-   python3 player.py
+   python3 music_player.py
    ```
 4. Follow the on-screen instructions in the terminal interface.
-
-**If the TUI doesn't work well for you, or just not for you. You can run the GUI implemented by pasting the following command**
-   ```bash
-   python3 gui.py
-   ```
-
----
 
 ## Available Actions
 

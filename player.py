@@ -14,9 +14,7 @@ class Player:
         self.loop = loop
         self.shuffle = shuffle
         self.earphone_device = earphone_device
-        self.music_files = [f for f in os.listdir(folder) if f.endswith('.mp3')]
-        if self.shuffle:
-            random.shuffle(self.music_files)
+        self.music_files = self._load_music_files(folder)
         self.current_index = 0
         self.paused = False
         self.earphone_events = []
@@ -38,6 +36,12 @@ class Player:
             self.event_thread.start()        
         pygame.mixer.init()
 
+    def _load_music_files(self, folder):
+        music_files = [f for f in os.listdir(folder) if f.endswith(".mp3")]
+        music_files.sort()
+        if self.shuffle:
+            random.shuffle(music_files)
+        return music_files
 
     def _discord_rpc_worker(self):
         """Thread to handle Discord RPC updates with debounce."""
@@ -73,6 +77,8 @@ class Player:
                 self.rpc_stop_event.wait(0.1)
 
     def play(self):
+        if not self.music_files:
+            return False
         music_file = self.music_files[self.current_index]
         music_path = os.path.join(self.folder, music_file)
         pygame.mixer.music.load(music_path)
@@ -92,6 +98,7 @@ class Player:
                 self.rpc_stop_event.clear()
                 self.rpc_thread = Thread(target=self._discord_rpc_worker, daemon=True)
                 self.rpc_thread.start()
+        return True
 
     def pause(self):
         pygame.mixer.music.pause()
@@ -101,27 +108,125 @@ class Player:
         pygame.mixer.music.unpause()
         self.paused = False
 
+    def toggle_pause(self):
+        if self.paused:
+            self.resume()
+        else:
+            self.pause()
+
     def next_track(self):
+        if not self.music_files:
+            return False
         pygame.mixer.music.stop()
-        self.current_index += 1
-        if self.current_index >= len(self.music_files):
+        next_index = self.current_index + 1
+        if next_index >= len(self.music_files):
             if self.loop:
-                self.current_index = 0
+                next_index = 0
             else:
                 self.current_index = len(self.music_files) - 1
-        self.play()
+                self.paused = True
+                return False
+        self.current_index = next_index
+        return self.play()
 
     def previous_track(self):
+        if not self.music_files:
+            return False
         pygame.mixer.music.stop()
         self.current_index -= 1
         if self.current_index < 0:
             self.current_index = len(self.music_files) - 1
-        self.play()
+        return self.play()
 
     def set_volume(self, volume):
         pygame.mixer.music.set_volume(max(0.0, min(1.0, volume)))
 
+    def adjust_volume(self, delta):
+        self.set_volume(pygame.mixer.music.get_volume() + delta)
+
+    def change_playlist(self, folder):
+        music_files = self._load_music_files(folder)
+        if not music_files:
+            return False
+        pygame.mixer.music.stop()
+        self.folder = folder
+        self.music_files = music_files
+        self.current_index = 0
+        return self.play()
+
+    def playlist_base_folder(self):
+        return os.path.dirname(self.folder)
+
+    def track_names(self):
+        return self.music_files[:]
+
+    def track_count(self):
+        return len(self.music_files)
+
+    def play_song(self, song):
+        if song not in self.music_files:
+            return False
+        pygame.mixer.music.stop()
+        self.current_index = self.music_files.index(song)
+        return self.play()
+
+    def queue_next(self, song):
+        if song not in self.music_files:
+            return False
+        current_position = self.music_files.index(song)
+        if current_position == self.current_index:
+            return True
+        song_name = self.music_files.pop(current_position)
+        if current_position < self.current_index:
+            self.current_index -= 1
+        insert_at = min(self.current_index + 1, len(self.music_files))
+        self.music_files.insert(insert_at, song_name)
+        return True
+
+    def upcoming_tracks(self, limit=10):
+        if not self.music_files:
+            return []
+        upcoming = []
+        for offset in range(1, min(limit + 1, len(self.music_files))):
+            index = (self.current_index + offset) % len(self.music_files)
+            upcoming.append((offset, self.music_files[index]))
+        return upcoming
+
+    def advance_if_finished(self):
+        if self.paused or self.is_playing():
+            return False
+        return self.next_track()
+
+    def pop_earphone_actions(self):
+        actions = []
+        mapping = {
+            ord("p"): "pause",
+            ord("r"): "resume",
+            ord("n"): "next",
+            ord("b"): "previous",
+            ord("+"): "volume_up",
+            ord("-"): "volume_down",
+        }
+        while self.earphone_events:
+            _, mapped_key = self.earphone_events.pop(0)
+            action = mapping.get(mapped_key)
+            if action:
+                actions.append(action)
+        return actions
+
     def get_current_track_info(self):
+        if not self.music_files:
+            return {
+                "artist": "Unknown Artist",
+                "title": "No track",
+                "filename": "",
+                "path": "",
+                "duration": 0,
+                "index": 0,
+                "paused": self.paused,
+                "volume": pygame.mixer.music.get_volume(),
+                "track_count": 0,
+            }
         music_file = self.music_files[self.current_index]
         music_path = os.path.join(self.folder, music_file)
         track_artist, track_title = parse_filename(music_file)
@@ -140,6 +245,7 @@ class Player:
             "index": self.current_index,
             "paused": self.paused,
             "volume": pygame.mixer.music.get_volume(),
+            "track_count": len(self.music_files),
         }
 
     def is_playing(self):

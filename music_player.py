@@ -1,11 +1,10 @@
-from tui import main_menu
+from tui import main as run_tui
 from dotenv import load_dotenv
-import curses
 
 load_dotenv()
 
 def main():
-    curses.wrapper(main_menu)
+    run_tui()
 
 if __name__ == "__main__":    
     main()
