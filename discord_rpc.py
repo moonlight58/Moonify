@@ -28,6 +28,9 @@ class DiscordRPC:
         except Exception:
             return False
 
+    def is_enabled(self):
+        return bool(self.rpc)
+
     def show_track(self, title, artist, cover_url=None):
         """Display current track in Discord Rich Presence."""
         if not self.rpc:

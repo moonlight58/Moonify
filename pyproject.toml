@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "moonify"
+version = "0.1.0"
+description = "A local MP3 music player with a Textual TUI and optional Discord Rich Presence."
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "pygame",
+    "mutagen",
+    "python-dotenv",
+    "pypresence",
+    "imgurpython",
+    "textual",
+]
+
+[project.scripts]
+moonify = "music_player:main"
+
+[tool.setuptools]
+py-modules = [
+    "cover",
+    "discord_rpc",
+    "earphone",
+    "library",
+    "music_player",
+    "playback_queue",
+    "player",
+    "presence",
+    "tui",
+    "utils",
+]

@@ -7,7 +7,7 @@ Moonify was originally created as a **personal alternative to Spotify**, motivat
 This project aims to provide a lightweight, privacy-friendly, and customizable music experience—without streaming, ads, or telemetry.  
 You keep full control of your music library, and artists are supported when you buy or download music directly.
 
-You can browse your music library, search, shuffle, and control playback with keyboard shortcuts or compatible earphones (still in development). I also implemented a discord Rich Presence into the app, it needs a Discord Application ID to connect to and it uses Imgur API to display the current music cover onto the Rich Presence
+You can browse your music library, search, shuffle, and control playback with keyboard shortcuts or compatible earphones (still in development). Optional Discord Rich Presence uses a Discord Application ID and Imgur credentials to display the current track and cover art.
 
 ---
 
@@ -15,7 +15,12 @@ You can browse your music library, search, shuffle, and control playback with ke
 
 ```
 music-player-cli/
-├── player.py                # Main player logic and TUI
+├── music_player.py          # TUI entry point
+├── player.py                # Playback module
+├── tui.py                   # Textual interface
+├── library.py               # Playlist and track discovery
+├── playback_queue.py        # Track queue ordering
+├── presence.py              # Discord Rich Presence adapter
 ├── music/                   # Folder to place your .mp3 files
 ├── requirements.txt         # Python dependencies
 ├── README.md                # Project documentation
@@ -44,7 +49,7 @@ Before using this application, you need to:
    - For automated uploads, you may need to generate an access token using your credentials.  
      **!!! See [Imgur API docs](https://apidocs.imgur.com/) for details. !!!**
 
-## And please don't forget to change the `.env.example` file to a `.env` file
+Copy `.env.example` to `.env` and fill in the values if you want Discord Rich Presence and Imgur cover uploads.
 
 ---
 
@@ -61,6 +66,15 @@ Before using this application, you need to:
    pip install -r requirements.txt
    ```
 
+   If you install the project as a package, you can also run it with:
+   ```bash
+   pip install -e .
+   ```
+
+   ```bash
+   moonify
+   ```
+
 ---
 
 ## Requirements
@@ -68,9 +82,9 @@ Before using this application, you need to:
 - Python 3.9+
 - [pygame](https://www.pygame.org/) (audio playback)
 - [mutagen](https://mutagen.readthedocs.io/) (MP3 metadata)
-- [click](https://click.palletsprojects.com/) (CLI)
+- [python-dotenv](https://pypi.org/project/python-dotenv/) (`.env` loading)
 - [pypresence](https://qwertyquerty.github.io/pypresence/html/index.html) (Discord Rich Presence)
-- [requests](https://docs.python-requests.org/) (Imgur API)
+- [imgurpython](https://pypi.org/project/imgurpython/) (Imgur API)
 - [Textual](https://textual.textualize.io/) (TUI window manager)
 
 ---
@@ -100,6 +114,14 @@ It will look like this
    python3 music_player.py
    ```
 4. Follow the on-screen instructions in the terminal interface.
+
+## Development
+
+Run the focused unit tests with:
+
+```bash
+python3 -m unittest discover
+```
 
 ## Available Actions
 

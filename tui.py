@@ -7,7 +7,8 @@ from textual.containers import Container, Horizontal, Vertical
 from textual.screen import ModalScreen, Screen
 from textual.widgets import Button, Checkbox, Footer, Header, Input, Label, ListItem, ListView, Static
 
-from earphone import find_earphone_device
+from media_controller import find_media_device
+from library import list_playlists, playlist_has_tracks
 from player import Player
 
 
@@ -112,14 +113,14 @@ class SearchScreen(ModalScreen):
 
     def update_results(self, term):
         term = term.lower().strip()
-        self.matches = [song for song in self.songs if term in song.lower()] if term else self.songs[:]
+        self.matches = [song for song in self.songs if term in str(song).lower()] if term else self.songs[:]
         results = self.query_one("#search-results", ListView)
         results.clear()
         if not self.matches:
             results.append(ListItem(Label("No tracks found")))
             return
         for song in self.matches:
-            results.append(ListItem(Label(song)))
+            results.append(ListItem(Label(str(song))))
         results.index = 0
 
 
@@ -156,13 +157,7 @@ class PlaylistScreen(Screen):
         self.dismiss(None)
 
     def load_playlists(self):
-        if not os.path.exists(self.base_folder):
-            return []
-        return [
-            (name, os.path.join(self.base_folder, name))
-            for name in sorted(os.listdir(self.base_folder))
-            if os.path.isdir(os.path.join(self.base_folder, name))
-        ]
+        return [(playlist.name, playlist.path) for playlist in list_playlists(self.base_folder)]
 
 
 class SetupScreen(Screen):
@@ -228,7 +223,7 @@ class SetupScreen(Screen):
         if not self.playlist:
             self.app.push_screen(MessageScreen("Playlist required", "Select a playlist before starting."))
             return
-        if not [song for song in os.listdir(self.playlist) if song.endswith(".mp3")]:
+        if not playlist_has_tracks(self.playlist):
             self.app.push_screen(MessageScreen("Empty playlist", "The selected playlist has no .mp3 files."))
             return
         player = Player(
@@ -241,13 +236,7 @@ class SetupScreen(Screen):
         self.app.switch_screen(PlayerScreen(player))
 
     def load_playlists(self):
-        if not os.path.exists(self.music_folder):
-            return []
-        return [
-            (name, os.path.join(self.music_folder, name))
-            for name in sorted(os.listdir(self.music_folder))
-            if os.path.isdir(os.path.join(self.music_folder, name))
-        ]
+        return [(playlist.name, playlist.path) for playlist in list_playlists(self.music_folder)]
 
 
 class PlayerScreen(Screen):
@@ -297,7 +286,7 @@ class PlayerScreen(Screen):
             self.player.stop()
 
     def refresh_player(self):
-        self.handle_earphone_events()
+        self.handle_media_events()
         self.player.advance_if_finished()
 
         info = self.player.get_current_track_info()
@@ -320,11 +309,11 @@ class PlayerScreen(Screen):
     def refresh_queue(self):
         queue = self.query_one("#queue", ListView)
         queue.clear()
-        for offset, song in self.player.upcoming_tracks():
-            queue.append(ListItem(Label(f"{offset}. {song}")))
+        for offset, track in self.player.upcoming_tracks():
+            queue.append(ListItem(Label(f"{offset}. {track.filename}")))
 
-    def handle_earphone_events(self):
-        for action in self.player.pop_earphone_actions():
+    def handle_media_events(self):
+        for action in self.player.pop_media_actions():
             if action == "pause":
                 self.action_pause()
             elif action == "resume":
@@ -380,7 +369,7 @@ class PlayerScreen(Screen):
         self.refresh_player()
 
     def action_search(self):
-        self.app.push_screen(SearchScreen(self.player.track_names()), self.handle_search_result)
+        self.app.push_screen(SearchScreen(self.player.get_tracks()), self.handle_search_result)
 
     def handle_search_result(self, result):
         if not result:
@@ -524,7 +513,7 @@ class MoonifyTUI(App):
         if not os.path.exists(music_folder):
             self.push_screen(MessageScreen("Missing music folder", "Create a music/ folder before starting."))
             return
-        earphone_device, device_name = find_earphone_device()
+        earphone_device, device_name = find_media_device()
         self.push_screen(SetupScreen(music_folder, earphone_device, device_name))
 
 

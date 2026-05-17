@@ -1,7 +1,5 @@
 from mutagen.mp3 import MP3
 from mutagen.id3 import ID3, APIC
-from PIL import Image
-import io
 from imgurpython import ImgurClient
 import os
 
@@ -20,6 +18,10 @@ def extract_cover(mp3_path, cover_path):
 def upload_to_imgur(image_path):
     client_id = os.getenv("IMGUR_CLIENT_ID")
     client_secret = os.getenv("IMGUR_CLIENT_SECRET")
+    if not client_id or not client_secret:
+        raise RuntimeError("IMGUR_CLIENT_ID and IMGUR_CLIENT_SECRET must be set")
+    if not os.path.exists(image_path):
+        raise FileNotFoundError(image_path)
     client = ImgurClient(client_id, client_secret)
     uploaded_image = client.upload_from_path(image_path, anon=True)
     return uploaded_image['link']

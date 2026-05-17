@@ -1,6 +1,6 @@
 pygame
 mutagen
-click
+python-dotenv
 pypresence
-requests
+imgurpython
 textual
