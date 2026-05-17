@@ -21,7 +21,7 @@ Before using this application, you need to:
    - Copy the `Application ID` (this will be your `DISCORD_CLIENT_ID`).
    - (Optional) Set up Rich Presence assets (images) if you want custom cover art.
 
-2. **Set Up Imgur API Access**  
+2. **Set Up Imgur API Access (Only Optional if you want Discord RPC)**  
    - Register for a free account at [Imgur](https://api.imgur.com/oauth2/addclient).
    - Create a new application (select "OAuth 2 authorization without a callback URL").
    - Copy your `Client ID` and `Client Secret` and put it in the `.env`.
