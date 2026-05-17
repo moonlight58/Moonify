@@ -11,26 +11,6 @@ You can browse your music library, search, shuffle, and control playback with ke
 
 ---
 
-## Project Structure
-
-```
-music-player-cli/
-├── music_player.py          # TUI entry point
-├── player.py                # Playback module
-├── tui.py                   # Textual interface
-├── library.py               # Playlist and track discovery
-├── playback_queue.py        # Track queue ordering
-├── presence.py              # Discord Rich Presence adapter
-├── music/                   # Folder to place your .mp3 files
-├── requirements.txt         # Python dependencies
-├── README.md                # Project documentation
-├── Terms of Service.md      # Terms of Service (multi-language)
-├── Privacy Policy.md        # Privacy Policy (multi-language)
-└── ...                      # Other supporting files/modules
-```
-
----
-
 ## Prerequisites
 
 Before using this application, you need to:
