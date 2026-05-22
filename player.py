@@ -1,17 +1,18 @@
 import os
-from library import list_track_files
+from library import Library
 from playback_queue import TrackQueue
 from presence import build_presence
 from engine import PlaybackEngine, PygameEngine
 from events import EventBus
-from models import Track
+from models import PlaybackSnapshot, QueueEntry, Track
 from media_controller import MediaController, LinuxMediaController, NullMediaController
 
 class Player:
-    def __init__(self, folder, loop=False, shuffle=False, earphone_device=None, enable_rpc=False, engine: PlaybackEngine = None, events: EventBus = None, media_controller: MediaController = None):
+    def __init__(self, folder, loop=False, shuffle=False, earphone_device=None, enable_rpc=False, engine: PlaybackEngine = None, events: EventBus = None, media_controller: MediaController = None, library: Library = None):
         self.folder = folder
         self.loop = loop
         self.shuffle = shuffle
+        self.library = library or Library()
         self.events = events or EventBus()
         self.engine = engine or PygameEngine()
         
@@ -22,7 +23,7 @@ class Player:
         else:
             self.media_controller = NullMediaController()
 
-        self.queue = TrackQueue(list_track_files(folder, shuffle=shuffle))
+        self.queue = TrackQueue(self.library.load_playlist(folder, shuffle=shuffle).tracks)
         self.paused = False
         self.presence = build_presence(enable_rpc)
         
@@ -57,6 +58,32 @@ class Player:
         else:
             self.pause()
 
+    def handle_command(self, command):
+        if command == "pause":
+            if self.paused:
+                return False
+            self.pause()
+            return True
+        if command == "resume":
+            if not self.paused:
+                return False
+            self.resume()
+            return True
+        if command == "toggle_pause":
+            self.toggle_pause()
+            return True
+        if command == "next":
+            return self.next_track()
+        if command == "previous":
+            return self.previous_track()
+        if command == "volume_up":
+            self.adjust_volume(0.1)
+            return True
+        if command == "volume_down":
+            self.adjust_volume(-0.1)
+            return True
+        return False
+
     def next_track(self):
         if not self.queue:
             return False
@@ -82,12 +109,12 @@ class Player:
         self.set_volume(self.engine.get_volume() + delta)
 
     def change_playlist(self, folder):
-        tracks = list_track_files(folder, shuffle=self.shuffle)
-        if not tracks:
+        playlist = self.library.load_playlist(folder, shuffle=self.shuffle)
+        if not playlist.is_playable:
             return False
         self.engine.stop()
         self.folder = folder
-        self.queue.replace(tracks)
+        self.queue.replace(playlist.tracks)
         return self.play()
 
     def playlist_base_folder(self):
@@ -120,28 +147,21 @@ class Player:
         return self.media_controller.pop_actions()
 
     def get_current_track_info(self):
-        track = self.queue.current()
-        if not track:
-            return {
-                "artist": "Unknown Artist",
-                "title": "No track",
-                "filename": "",
-                "path": "",
-                "duration": 0,
-                "index": 0,
-                "paused": self.paused,
-                "volume": self.engine.get_volume(),
-                "track_count": 0,
-            }
-        
-        info = track.to_dict()
-        info.update({
-            "index": self.index(),
-            "paused": self.paused,
-            "volume": self.engine.get_volume(),
-            "track_count": len(self.queue),
-        })
-        return info
+        return self.snapshot().to_current_track_dict()
+
+    def snapshot(self, upcoming_limit=10):
+        return PlaybackSnapshot(
+            current=self.queue.current(),
+            index=self.index(),
+            paused=self.paused,
+            volume=self.engine.get_volume(),
+            track_count=len(self.queue),
+            elapsed_seconds=max(self.get_elapsed_ms() // 1000, 0),
+            upcoming=[
+                QueueEntry(offset=offset, track=track)
+                for offset, track in self.queue.upcoming(upcoming_limit)
+            ],
+        )
 
     def is_playing(self):
         return self.engine.is_busy() and not self.paused

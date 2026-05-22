@@ -3,6 +3,7 @@
 - **Track**: A single audio entity. Represents an audio file on disk and its associated metadata (artist, title, duration).
 - **Library**: The collection of tracks available in a specific folder.
 - **Playback Queue**: A stateful sequence of tracks being played or scheduled to play.
+- **Playback Snapshot**: A read model of current playback state, including the current track, elapsed time, volume, paused state, and upcoming tracks.
 - **Player**: The central orchestrator that manages playback state, volume, and coordinates with external services.
 - **TUI**: The Terminal User Interface for interacting with Moonify.
 - **Media Controller**: An interface for external hardware (like earphone buttons) to control playback.

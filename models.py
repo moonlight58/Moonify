@@ -1,38 +1,12 @@
-import os
-from dataclasses import dataclass, field
-from typing import Optional
-from utils import parse_filename
+from dataclasses import dataclass
 
 @dataclass(frozen=True)
 class Track:
     path: str
-    filename: str = field(init=False)
-    artist: str = field(init=False)
-    title: str = field(init=False)
-    duration: int = field(default=0)  # In seconds
-
-    def __post_init__(self):
-        filename = os.path.basename(self.path)
-        object.__setattr__(self, 'filename', filename)
-        artist, title = parse_filename(filename)
-        object.__setattr__(self, 'artist', artist)
-        object.__setattr__(self, 'title', title)
-        
-        if self.duration == 0:
-            try:
-                from mutagen.mp3 import MP3
-                audio = MP3(self.path)
-                object.__setattr__(self, 'duration', int(audio.info.length))
-            except Exception:
-                pass
-
-    @classmethod
-    def from_path(cls, path: str):
-        # We can optimize duration extraction later or pass it here
-        return cls(path=path)
-
-    def with_duration(self, duration: int):
-        return Track(path=self.path, duration=duration)
+    filename: str
+    artist: str
+    title: str
+    duration: int = 0  # In seconds
 
     def to_dict(self):
         return {
@@ -45,3 +19,53 @@ class Track:
 
     def __str__(self):
         return self.filename
+
+
+@dataclass(frozen=True)
+class QueueEntry:
+    offset: int
+    track: Track
+
+
+@dataclass(frozen=True)
+class PlaybackSnapshot:
+    current: Track | None
+    index: int
+    paused: bool
+    volume: float
+    track_count: int
+    elapsed_seconds: int
+    upcoming: list[QueueEntry]
+
+    @property
+    def artist(self):
+        return self.current.artist if self.current else "Unknown Artist"
+
+    @property
+    def title(self):
+        return self.current.title if self.current else "No track"
+
+    @property
+    def filename(self):
+        return self.current.filename if self.current else ""
+
+    @property
+    def path(self):
+        return self.current.path if self.current else ""
+
+    @property
+    def duration(self):
+        return self.current.duration if self.current else 0
+
+    def to_current_track_dict(self):
+        return {
+            "artist": self.artist,
+            "title": self.title,
+            "filename": self.filename,
+            "path": self.path,
+            "duration": self.duration,
+            "index": self.index,
+            "paused": self.paused,
+            "volume": self.volume,
+            "track_count": self.track_count,
+        }

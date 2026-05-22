@@ -1,8 +1,5 @@
 import threading
 
-from cover import extract_cover, upload_to_imgur
-from discord_rpc import DiscordRPC
-
 
 class NullPresence:
     def track_started(self, track):
@@ -12,10 +9,46 @@ class NullPresence:
         return None
 
 
-class DiscordPresence:
-    def __init__(self, rpc=None, cover_path="/tmp/current_cover.jpg", debounce_seconds=2):
-        self.rpc = rpc or DiscordRPC(enable_rpc=True)
+class DiscordTransport:
+    def __init__(self, rpc=None):
+        if rpc is None:
+            from discord_rpc import DiscordRPC
+
+            rpc = DiscordRPC(enable_rpc=True)
+        self.rpc = rpc
+
+    def is_enabled(self):
+        return self.rpc.is_enabled()
+
+    def show_track(self, title, artist, cover_url=None):
+        self.rpc.show_track(title=title, artist=artist, cover_url=cover_url)
+
+    def close(self):
+        self.rpc.clear()
+
+
+class ImgurCoverProvider:
+    def __init__(self, cover_path="/tmp/current_cover.jpg", extract_cover_func=None, upload_func=None):
         self.cover_path = cover_path
+        self.extract_cover = extract_cover_func
+        self.upload = upload_func
+
+    def cover_url_for(self, track):
+        if self.extract_cover is None or self.upload is None:
+            from cover import extract_cover, upload_to_imgur
+
+            self.extract_cover = extract_cover
+            self.upload = upload_to_imgur
+
+        if self.extract_cover(track["path"], self.cover_path):
+            return self.upload(self.cover_path)
+        return None
+
+
+class DiscordPresence:
+    def __init__(self, transport=None, cover_provider=None, debounce_seconds=2):
+        self.transport = transport or DiscordTransport()
+        self.cover_provider = cover_provider or ImgurCoverProvider()
         self.debounce_seconds = debounce_seconds
         self.stop_event = threading.Event()
         self.thread = None
@@ -23,7 +56,7 @@ class DiscordPresence:
         self.last_track = None
 
     def track_started(self, track):
-        if not self.rpc.is_enabled():
+        if not self.transport.is_enabled():
             return
         self.pending_track = track.copy()
         if not self.thread or not self.thread.is_alive():
@@ -35,7 +68,7 @@ class DiscordPresence:
         if self.thread and self.thread.is_alive():
             self.stop_event.set()
             self.thread.join(timeout=2)
-        self.rpc.clear()
+        self.transport.close()
 
     def _worker(self):
         while not self.stop_event.is_set():
@@ -58,12 +91,11 @@ class DiscordPresence:
     def _show_track(self, track):
         cover_url = None
         try:
-            if extract_cover(track["path"], self.cover_path):
-                cover_url = upload_to_imgur(self.cover_path)
+            cover_url = self.cover_provider.cover_url_for(track)
         except Exception as exc:
             print(f"[DiscordPresence] Cover upload failed: {exc}")
 
-        self.rpc.show_track(
+        self.transport.show_track(
             title=track["title"],
             artist=track["artist"],
             cover_url=cover_url,

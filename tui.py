@@ -8,7 +8,7 @@ from textual.screen import ModalScreen, Screen
 from textual.widgets import Button, Checkbox, Footer, Header, Input, Label, ListItem, ListView, Static
 
 from media_controller import find_media_device
-from library import list_playlists, playlist_has_tracks
+from library import Library
 from player import Player
 
 
@@ -127,10 +127,11 @@ class SearchScreen(ModalScreen):
 class PlaylistScreen(Screen):
     BINDINGS = [Binding("escape,q", "cancel", "Cancel")]
 
-    def __init__(self, base_folder, title="Select playlist"):
+    def __init__(self, base_folder, title="Select playlist", library=None):
         super().__init__()
         self.base_folder = base_folder
         self.title = title
+        self.library = library or Library()
         self.playlists = self.load_playlists()
 
     def compose(self) -> ComposeResult:
@@ -157,7 +158,7 @@ class PlaylistScreen(Screen):
         self.dismiss(None)
 
     def load_playlists(self):
-        return [(playlist.name, playlist.path) for playlist in list_playlists(self.base_folder)]
+        return [(playlist.name, playlist.path) for playlist in self.library.list_playlists(self.base_folder)]
 
 
 class SetupScreen(Screen):
@@ -166,6 +167,7 @@ class SetupScreen(Screen):
         self.music_folder = music_folder
         self.earphone_device = earphone_device
         self.device_name = device_name
+        self.library = Library()
         self.playlist = None
 
     def compose(self) -> ComposeResult:
@@ -223,7 +225,7 @@ class SetupScreen(Screen):
         if not self.playlist:
             self.app.push_screen(MessageScreen("Playlist required", "Select a playlist before starting."))
             return
-        if not playlist_has_tracks(self.playlist):
+        if not self.library.playlist_has_tracks(self.playlist):
             self.app.push_screen(MessageScreen("Empty playlist", "The selected playlist has no .mp3 files."))
             return
         player = Player(
@@ -232,11 +234,12 @@ class SetupScreen(Screen):
             shuffle=self.query_one("#shuffle", Checkbox).value,
             earphone_device=self.earphone_device,
             enable_rpc=self.query_one("#rpc", Checkbox).value,
+            library=self.library,
         )
         self.app.switch_screen(PlayerScreen(player))
 
     def load_playlists(self):
-        return [(playlist.name, playlist.path) for playlist in list_playlists(self.music_folder)]
+        return [(playlist.name, playlist.path) for playlist in self.library.list_playlists(self.music_folder)]
 
 
 class PlayerScreen(Screen):
@@ -257,6 +260,7 @@ class PlayerScreen(Screen):
         super().__init__()
         self.player = player
         self.started = False
+        self.queue_signature = None
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
@@ -289,76 +293,70 @@ class PlayerScreen(Screen):
         self.handle_media_events()
         self.player.advance_if_finished()
 
-        info = self.player.get_current_track_info()
-        elapsed = max(self.player.get_elapsed_ms() // 1000, 0)
-        total = info["duration"]
-        status = "Paused" if self.player.paused else "Playing"
+        snapshot = self.player.snapshot()
+        total = snapshot.duration
+        status = "Paused" if snapshot.paused else "Playing"
 
-        self.query_one("#track-title", Static).update(info["title"])
-        self.query_one("#track-artist", Static).update(info["artist"])
-        self.query_one("#status", Static).update(f"{status} · Track {info['index'] + 1}/{info['track_count']}")
+        self.query_one("#track-title", Static).update(snapshot.title)
+        self.query_one("#track-artist", Static).update(snapshot.artist)
+        self.query_one("#status", Static).update(f"{status} · Track {snapshot.index + 1}/{snapshot.track_count}")
         self.query_one("#progress", Static).update(
-            f"{progress_bar(elapsed, total)} {format_time(elapsed)} / {format_time(total)}"
+            f"{progress_bar(snapshot.elapsed_seconds, total)} {format_time(snapshot.elapsed_seconds)} / {format_time(total)}"
         )
-        self.query_one("#volume", Static).update(f"Volume {int(info['volume'] * 100)}%")
+        self.query_one("#volume", Static).update(f"Volume {int(snapshot.volume * 100)}%")
         self.query_one("#controls", Static).update(
             "Space play/pause · N next · B back · +/- volume · S search · C playlist · Q quit"
         )
-        self.refresh_queue()
+        self.refresh_queue(snapshot)
 
-    def refresh_queue(self):
+    def refresh_queue(self, snapshot):
+        queue_signature = tuple((entry.offset, entry.track.path) for entry in snapshot.upcoming)
+        if queue_signature == self.queue_signature:
+            return
+
+        self.queue_signature = queue_signature
         queue = self.query_one("#queue", ListView)
         queue.clear()
-        for offset, track in self.player.upcoming_tracks():
-            queue.append(ListItem(Label(f"{offset}. {track.filename}")))
+        for entry in snapshot.upcoming:
+            queue.append(ListItem(Label(f"{entry.offset}. {entry.track.filename}")))
 
     def handle_media_events(self):
         for action in self.player.pop_media_actions():
-            if action == "pause":
-                self.action_pause()
-            elif action == "resume":
-                self.action_resume()
-            elif action == "next":
-                self.action_next()
-            elif action == "previous":
-                self.action_previous()
-            elif action == "volume_up":
-                self.action_volume_up()
-            elif action == "volume_down":
-                self.action_volume_down()
+            self.player.handle_command(action)
 
     def action_pause(self):
-        if not self.player.paused:
-            self.player.pause()
-            self.refresh_player()
+        self.player.handle_command("pause")
+        self.refresh_player()
 
     def action_resume(self):
-        if self.player.paused:
-            self.player.resume()
-            self.refresh_player()
+        self.player.handle_command("resume")
+        self.refresh_player()
 
     def action_toggle_pause(self):
-        self.player.toggle_pause()
+        self.player.handle_command("toggle_pause")
         self.refresh_player()
 
     def action_next(self):
-        self.player.next_track()
+        self.player.handle_command("next")
         self.refresh_player()
 
     def action_previous(self):
-        self.player.previous_track()
+        self.player.handle_command("previous")
         self.refresh_player()
 
     def action_volume_up(self):
-        self.player.adjust_volume(0.1)
+        self.player.handle_command("volume_up")
         self.refresh_player()
 
     def action_volume_down(self):
-        self.player.adjust_volume(-0.1)
+        self.player.handle_command("volume_down")
         self.refresh_player()
 
     def action_change_playlist(self):
-        self.app.push_screen(PlaylistScreen(self.player.playlist_base_folder(), "Change playlist"), self.change_playlist)
+        self.app.push_screen(
+            PlaylistScreen(self.player.playlist_base_folder(), "Change playlist", library=self.player.library),
+            self.change_playlist,
+        )
 
     def change_playlist(self, playlist):
         if not playlist:
@@ -389,33 +387,35 @@ class PlayerScreen(Screen):
 class MoonifyTUI(App):
     CSS = """
     Screen {
-        background: #101418;
-        color: #d7dde5;
+        background: #0b0d10;
+        color: #e8eaed;
     }
 
     Header {
-        background: #1f6f78;
-        color: #ffffff;
+        background: #15181d;
+        color: #8ff0b6;
+        text-style: bold;
     }
 
     Footer {
-        background: #151b20;
-        color: #d7dde5;
+        background: #111419;
+        color: #a8b0bb;
     }
 
     #setup, #player {
         height: 100%;
-        padding: 1 2;
+        padding: 1 3;
     }
 
     #setup-title {
         text-style: bold;
-        color: #f4c95d;
+        color: #8ff0b6;
         margin-bottom: 1;
     }
 
     #device-status {
         margin-bottom: 1;
+        color: #a8b0bb;
     }
 
     #setup-body, #player-grid {
@@ -423,17 +423,17 @@ class MoonifyTUI(App):
     }
 
     .panel {
-        border: round #4d6a7a;
+        border: tall #2d333b;
         padding: 1 2;
         margin-right: 1;
         width: 1fr;
         height: 100%;
-        background: #151b20;
+        background: #111419;
     }
 
     .panel-title {
         text-style: bold;
-        color: #f4c95d;
+        color: #f0c36a;
         margin-bottom: 1;
     }
 
@@ -443,31 +443,77 @@ class MoonifyTUI(App):
         margin-bottom: 1;
     }
 
-    #track-artist, #status, #progress, #volume, #controls {
+    #track-artist {
+        color: #a8b0bb;
         margin-bottom: 1;
     }
 
+    #status {
+        color: #8ff0b6;
+        margin-bottom: 1;
+    }
+
+    #progress, #volume, #controls {
+        margin-bottom: 1;
+    }
+
+    #progress {
+        color: #e8eaed;
+    }
+
+    #volume {
+        color: #f0c36a;
+    }
+
     #controls {
-        color: #aeb9c5;
+        color: #8f99a6;
         padding-top: 1;
     }
 
     ListView {
         height: 1fr;
+        background: #0b0d10;
+        border: blank #0b0d10;
     }
 
     ListView > ListItem.--highlight {
-        background: #1f6f78;
+        background: #233629;
         color: #ffffff;
+        text-style: bold;
+    }
+
+    Input {
+        background: #0b0d10;
+        color: #e8eaed;
+        border: tall #2d333b;
+    }
+
+    Input:focus {
+        border: tall #8ff0b6;
     }
 
     Checkbox {
         margin-bottom: 1;
+        color: #e8eaed;
     }
 
     Button {
         margin-top: 1;
         width: 100%;
+        background: #1b2028;
+        color: #e8eaed;
+        border: tall #2d333b;
+    }
+
+    Button:hover {
+        background: #233629;
+        border: tall #8ff0b6;
+    }
+
+    Button.-primary {
+        background: #2f6f4e;
+        color: #ffffff;
+        text-style: bold;
     }
 
     #dialog, #search-dialog {
@@ -476,8 +522,8 @@ class MoonifyTUI(App):
         max-height: 80%;
         margin: 2 4;
         padding: 1 2;
-        border: round #f4c95d;
-        background: #151b20;
+        border: tall #f0c36a;
+        background: #111419;
     }
 
     #search-results {
@@ -487,7 +533,7 @@ class MoonifyTUI(App):
 
     #dialog-title {
         text-style: bold;
-        color: #f4c95d;
+        color: #f0c36a;
         margin-bottom: 1;
     }
 
@@ -502,7 +548,7 @@ class MoonifyTUI(App):
     }
 
     .hint, .empty {
-        color: #aeb9c5;
+        color: #8f99a6;
     }
     """
 
